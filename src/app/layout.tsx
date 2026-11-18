@@ -21,7 +21,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${serif.variable} ${caps.variable}`}>{children}</body>
+      <head>
+        {/* before anything is drawn: never put the page back where it was scrolled to on a refresh */}
+        <script dangerouslySetInnerHTML={{ __html: `if("scrollRestoration"in history)history.scrollRestoration="manual";scrollTo(0,0)` }} />
+      </head>
+      {/* the page arrives locked to one screen (the cover), so a refresh can't land mid-page;
+          the opening unlocks it once it has played */}
+      <body className={`${serif.variable} ${caps.variable} is-locked`}>{children}</body>
     </html>
   );
 }

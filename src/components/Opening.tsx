@@ -91,7 +91,8 @@ export default function Opening() {
     };
     fit();
     window.addEventListener("resize", fit);
-    document.body.classList.add("is-locked");
+    document.body.classList.add("is-locked");   // already there from the server; kept for client navigations
+    window.scrollTo(0, 0);
     return () => {
       window.removeEventListener("resize", fit);
       window.clearTimeout(fallback);
