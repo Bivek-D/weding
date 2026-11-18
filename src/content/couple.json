@@ -1,0 +1,53 @@
+{
+  "_note": "Per-couple content. Everything here is placeholder copy until the couple sends their real names, dates and venues.",
+  "monogram": "R & A",
+  "groom": { "name": "Riju", "full": "Riju Basumatary", "parents": "Son of Mr and Mrs Basumatary" },
+  "bride": { "name": "Anjali", "full": "Anjali Narzary", "parents": "Daughter of Mr and Mrs Narzary" },
+  "blessing": "With the blessings of Bathou Bwrai",
+  "date": "2027-06-13T10:00:00+05:30",
+  "dateLabel": "Sunday · 13 June 2027",
+  "place": "Kokrajhar, Bodoland",
+  "welcome": "With the blessings of our elders and before the sacred Bathou, we invite you to share the day our two families become one. Come in your brightest dokhona and gamsa, and celebrate with us.",
+  "events": [
+    {
+      "id": "haba",
+      "title": "Hathasuni Haba",
+      "subtitle": "The wedding before the Bathou",
+      "start": "2027-06-13T10:00:00+05:30",
+      "end": "2027-06-13T13:00:00+05:30",
+      "venue": "Narzary family home",
+      "address": "Titaguri, Kokrajhar, Assam",
+      "note": "The bride serves the first meal of rice and ondlakhari to the groom and to every guest."
+    },
+    {
+      "id": "reception",
+      "title": "Reception",
+      "subtitle": "Music, Bagurumba and dinner",
+      "start": "2027-06-13T18:30:00+05:30",
+      "end": "2027-06-13T22:30:00+05:30",
+      "venue": "Riverside Garden",
+      "address": "Gossaigaon Road, Kokrajhar, Assam",
+      "note": "The kham and siphung play from sunset."
+    }
+  ],
+  "dressCode": [
+    { "who": "Women", "what": "Dokhona with jwmgra. Gwmw yellow, green or any bright colour you love." },
+    { "who": "Men", "what": "Gamsa with khot gosla, or festive formal wear." },
+    { "who": "Every guest", "what": "An aronai will be placed around your neck when you arrive." }
+  ],
+  "story": "We met at a Bwisagu celebration in Kokrajhar, both pretending not to watch the other dance. Seven springs later, we are asking our families and friends to stand with us before the Bathou.",
+  "timeline": [
+    { "time": "09:30", "title": "Guests arrive", "text": "Welcome with aronai and tea", "art": "step-arrive" },
+    { "time": "10:00", "title": "Hathasuni Haba", "text": "The couple before the Bathou", "art": "step-haba", "artWidth": 36 },
+    { "time": "12:30", "title": "First meal", "text": "Rice and ondlakhari served by the bride", "art": "step-meal" },
+    { "time": "18:30", "title": "Reception", "text": "Kham, siphung and Bagurumba", "art": "step-reception" },
+    { "time": "20:00", "title": "Dinner", "text": "Under the lamps at Riverside Garden", "art": "step-dinner" }
+  ],
+  "travel": [
+    { "title": "Getting there", "text": "Kokrajhar railway station is 4 km away. Rupsi airport is the closest airport, about 40 minutes by car." },
+    { "title": "Transport", "text": "Our cars wait at the station on the morning of the wedding. Call Dwimalu on 98640 21573 to be picked up." },
+    { "title": "Where to stay", "text": "We have held rooms at the Hotel Bodoland Inn and the Gaurang Riverside Lodge. Mention our names when you book." }
+  ],
+  "gift": "Your presence is our gift. If you would like to bless us further, a small box for envelopes will be beside the Bathou.",
+  "rsvpBy": "1 May 2027"
+}

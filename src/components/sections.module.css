@@ -1,0 +1,137 @@
+/* ---------------------------------------------------------------- shared */
+.heading { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+/* the section's emblem: a rendered object set on the paper, floating very slightly over its own shadow */
+.emblem { display: flex; justify-content: center; margin-bottom: 6px; }
+.emblem img { height: auto; max-width: 100%; animation: float 7s ease-in-out infinite alternate; }
+@keyframes float { from { translate: 0 0; } to { translate: 0 -4px; } }
+.aside { margin-top: 4px; font-size: 9.5px; }
+.quote { font-size: 19px; text-transform: uppercase; letter-spacing: .14em; color: var(--maroon); margin-top: 6px; line-height: 1.35; }
+.clip { overflow: hidden; }
+
+/* ---------------------------------------------------------------- raised embroidery placement */
+.welcome { padding-top: 250px; padding-left: 50px; padding-right: 50px; overflow: hidden; }
+.welcome :global(.stack) > :first-child { margin: 0 -40px; }   /* the peacocks may use the full width */
+.garland { position: absolute !important; top: -4px; left: 0; z-index: 2; }
+.withVines { overflow: hidden; padding-left: 50px; padding-right: 50px; }
+.vine { position: absolute !important; top: 40px; z-index: 2; }
+.vineL { left: 4px; }
+.vineR { right: 4px; }
+.welcome .vine { top: 210px; }
+.peacocks { display: flex; justify-content: center; margin-bottom: 4px; }
+
+/* sprigs lying over card corners */
+.corner { position: absolute !important; z-index: 3; }
+.cornerTL { top: -24px; left: -16px; }
+.cornerBR { bottom: -24px; right: -16px; }
+.footBL { bottom: 8px; left: 6px; }
+.footBR { bottom: 8px; right: 6px; }
+
+/* a marigold swag draped over the top of each arch */
+.archSwag { position: absolute !important; top: 14px; left: 50%; margin-left: -105px; z-index: 3; }
+
+/* story: the knot between two Bagurumba butterflies hovering over the paper */
+.storyArt { position: relative; width: 300px; height: 150px; display: flex; justify-content: center; align-items: center; }
+.knotArt { width: 230px; height: auto; filter: drop-shadow(2px 6px 6px rgb(60 30 10 / .16)); }
+.fly { position: absolute !important; animation: hover 5s ease-in-out infinite alternate; }
+.flyL { left: 0; top: 2px; rotate: -14deg; }
+.flyR { right: 6px; bottom: 0; rotate: 12deg; animation-delay: -2.4s; animation-duration: 6s; }
+@keyframes hover { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+
+/* raised divider between sections */
+.divider { display: flex; justify-content: center; padding: 8px 0; }
+
+/* ---------------------------------------------------------------- countdown */
+.countSection { padding-left: 0; padding-right: 0; }
+.countWrap { position: relative; margin: 0 22px; }
+/* an aronai ribbon passing behind the card, coming out at both sides */
+.ribbon {
+  position: absolute; left: -40px; right: -40px; top: 50%; height: 26px; margin-top: -13px;
+  background: url(/art/band-scarlet.webp) 0 50% / auto 100% repeat-x;
+  box-shadow: 0 3px 6px rgb(60 30 10 / .2);
+}
+.countCard { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 18px 34px; text-align: center; }
+.count { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; margin-top: 18px; }
+.cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cell + .cell { border-left: 1px solid var(--hair); }
+.num { font-size: 44px; line-height: 1; color: var(--maroon); font-variant-numeric: lining-nums tabular-nums; }
+.cell :global(.caps) { font-size: 9px; letter-spacing: .26em; }
+.saveDate { display: flex; justify-content: center; margin-top: 22px; }
+
+/* ---------------------------------------------------------------- events */
+.event { width: 100%; padding: 78px 26px 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; }
+.eventArt { width: 170px; height: auto; margin: -6px 0 6px; filter: drop-shadow(2px 6px 6px rgb(60 30 10 / .16)); }
+.eventTitle { font-size: 30px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink); line-height: 1.1; }
+.block { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 14px; }
+.blockHead { font-size: 22px; color: var(--emerald-d); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+.big { font-size: 30px; color: var(--ink); line-height: 1.15; }
+.mid { font-size: 20px; color: var(--ink); }
+.note { font-size: 16px; margin: 12px 0 4px; max-width: 260px; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- dress code */
+.dress { list-style: none; display: flex; flex-direction: column; gap: 40px; margin-top: 10px; }
+.garment { width: 170px; height: auto; margin: 0 auto 12px; filter: drop-shadow(2px 6px 6px rgb(60 30 10 / .14)); }
+.who { font-size: 22px; text-transform: uppercase; letter-spacing: .1em; color: var(--maroon); margin-bottom: 4px; }
+.dress p:last-child { max-width: 280px; margin: 0 auto; }
+.drifts { position: absolute; inset: 0; pointer-events: none; }
+.drift { position: absolute; left: 0; top: 0; width: 52px; height: 40px; perspective: 120px; opacity: .85; filter: drop-shadow(6px 10px 4px rgb(60 30 10 / .18)); }
+.wl, .wr { position: absolute; top: 0; width: 50%; height: 100%; object-fit: contain; }
+.wr { left: 50%; transform-origin: 0 50%; animation: fr .3s ease-in-out infinite alternate; }
+.wl { right: 50%; transform-origin: 100% 50%; animation: fl .3s ease-in-out infinite alternate; }
+@keyframes fr { to { transform: rotateY(-60deg); } }
+@keyframes fl { from { transform: scaleX(-1); } to { transform: scaleX(-1) rotateY(-60deg); } }
+
+/* ---------------------------------------------------------------- timeline */
+.steps { position: relative; list-style: none; margin: 40px auto 0; max-width: 330px; display: flex; flex-direction: column; gap: 34px; }
+.track { position: absolute; left: 100px; top: 8px; bottom: 8px; width: 1px; background: rgb(185 138 58 / .2); }
+.thread { position: absolute; inset: 0; background: var(--gold); transform-origin: 50% 0; }
+.step { position: relative; display: grid; grid-template-columns: 74px 1fr; gap: 52px; align-items: baseline; }
+/* each moment's own object sits on the thread, centred on it */
+.bead { position: absolute !important; left: 78px; top: -12px; z-index: 2; }
+.stepTime { text-align: right; font-size: 24px; color: var(--maroon); line-height: 1.1; font-variant-numeric: lining-nums; }
+.stepTitle { font-size: 21px; line-height: 1.2; color: var(--ink); }
+.stepBody p { font-size: 16px; line-height: 1.45; }
+
+/* ---------------------------------------------------------------- travel */
+.travel { width: 100%; padding: 30px 28px 28px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.travelText { font-size: 17px; line-height: 1.55; color: var(--ink-soft); }
+
+/* ---------------------------------------------------------------- rsvp */
+.rsvpCard { width: 100%; padding: 40px 26px 30px; display: flex; flex-direction: column; align-items: center; }
+.replyBy { text-align: center; margin-bottom: 22px; }
+.form { width: 100%; display: flex; flex-direction: column; gap: 20px; text-align: left; align-items: stretch; }
+.form > :global(.link) { align-self: center; margin-top: 6px; }
+.field { display: flex; flex-direction: column; gap: 8px; font-size: 16px; color: var(--ink); border: 0; min-width: 0; }
+.field legend { margin-bottom: 8px; }
+.field input:not([type="radio"]), .field select, .field textarea {
+  font: inherit; font-size: 17px; color: var(--ink);
+  border: 1px solid rgb(142 38 32 / .28); border-radius: 0; padding: 11px 14px; min-height: 48px; width: 100%;
+  background: rgb(255 255 255 / .35); appearance: none; transition: border-color .2s, background .2s;
+}
+.field textarea { resize: vertical; }
+.field select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 52%, calc(100% - 15px) 52%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+.field :is(input, select, textarea):focus-visible { outline: none; border-color: var(--maroon); background: rgb(255 255 255 / .6); }
+.field ::placeholder { color: #a4968a; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px 14px;
+  border: 1px solid rgb(142 38 32 / .22); text-align: center; font-size: 15px; line-height: 1.3; cursor: pointer;
+  transition: background .25s, border-color .25s;
+}
+.choice input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgb(142 38 32 / .5); display: grid; place-items: center; }
+.dot::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--maroon); transform: scale(0); transition: transform .25s; }
+.choice:has(input:checked) { background: rgb(142 38 32 / .07); border-color: rgb(142 38 32 / .45); }
+.choice:has(input:checked) .dot::after { transform: scale(1); }
+.choice:has(input:focus-visible) { outline: 1px solid var(--maroon); outline-offset: 2px; }
+.error { color: var(--scarlet-d); text-align: center; }
+.thanks { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.thanksArt { width: 180px; height: auto; }
+
+/* ---------------------------------------------------------------- footer */
+.footer { padding-bottom: 110px; }
+.lamp { width: 190px; height: auto; margin-bottom: 8px; }
+.sign { font-size: 44px; text-transform: uppercase; letter-spacing: .06em; color: var(--maroon); line-height: 1.05; display: flex; flex-direction: column; align-items: center; }
+.sign span { font-size: 26px; color: var(--gold); margin: 4px 0; }
