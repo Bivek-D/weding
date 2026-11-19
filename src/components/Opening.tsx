@@ -10,6 +10,7 @@ import { createCurtain, type Curtain } from "@/lib/curtainGL";
 import s from "./opening.module.css";
 
 const FRAMES = 36;
+const UNTIE_FRAMES = 30;     // design/blender/render_aronai.py -- untie
 const frameSrc = (i: number) => `/art/curtain/${String(i).padStart(2, "0")}.webp`;
 
 /** The cinematic opening: woven doors → curtain sequence (pre-rendered, drawn on a canvas) → swags,
@@ -22,6 +23,33 @@ export default function Opening() {
   const frames = useRef<HTMLImageElement[]>([]);
   const frame = useRef({ i: 0 });
   const [opened, setOpened] = useState(false);
+  const altarRef = useRef<HTMLDivElement>(null);
+  const hangs = useRef<(HTMLImageElement | null)[]>([]);
+
+  // the aronai hung on the walls beside the shrine: each centred in the free wall between the curtain's
+  // gathered edge and the shrine's post, sized to it, left out where the curtains leave no wall
+  useEffect(() => {
+    const fit = () => {
+      const al = altarRef.current, st = root.current;
+      if (!al || !st) return;
+      const Wst = st.clientWidth, Wa = al.offsetWidth;
+      const altarLeft = al.offsetLeft - Wa / 2;            // .altar is centred with translateX(-50%)
+      const curtain = Wst * 0.13;                          // the gathered curtain's inner edge, roughly
+      const gap = altarLeft + Wa * 0.1 - curtain;           // to the shrine's left post
+      const w = Math.min(64, gap * 0.7);
+      hangs.current.forEach((h, i) => {
+        if (!h) return;
+        h.style.display = gap < 24 ? "none" : "";
+        const cx = curtain + gap * 0.42;                   // a little nearer the curtain than the shrine
+        h.style.width = `${w}px`;
+        h.style.left = `${(i === 0 ? cx : Wst - cx) - w / 2}px`;
+        h.style.top = `${al.offsetTop - w * 0.4}px`;        // the nail a little above the shrine's bar
+      });
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
   const [ready, setReady] = useState(false);
   const lenis = useLenis();
 
@@ -110,54 +138,7 @@ export default function Opening() {
     return () => stops.forEach((f) => f());
   }, []);
 
-  // the opened scene: the phone's orientation (or the pointer) slides its layers by depth; with no input it
-  // drifts gently. The cover itself stays still.
-  useEffect(() => {
-    const el = rig.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const tgt = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, shown = { x: "", y: "" };
-    let base: { b: number; g: number } | null = null;
-    let last = -1e9;
-    const onTilt = (e: DeviceOrientationEvent) => {
-      if (e.beta == null || e.gamma == null) return;
-      base ??= { b: e.beta, g: e.gamma };
-      tgt.x = gsap.utils.clamp(-1, 1, (e.gamma - base.g) / 18);
-      tgt.y = gsap.utils.clamp(-1, 1, (e.beta - base.b) / 18);
-      last = performance.now();
-    };
-    const onPointer = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      const r = el.getBoundingClientRect();
-      tgt.x = gsap.utils.clamp(-1, 1, ((e.clientX - r.left) / r.width - 0.5) * 2);
-      tgt.y = gsap.utils.clamp(-1, 1, ((e.clientY - r.top) / r.height - 0.5) * 2);
-      last = performance.now();
-    };
-    const hero = root.current!;
-    const tick = (time: number) => {
-      if (performance.now() - last > 2500) {            // idle drift
-        tgt.x = Math.sin(time * 0.55) * 0.45;
-        tgt.y = Math.sin(time * 0.4 + 1) * 0.35;
-      }
-      cur.x += (tgt.x - cur.x) * 0.07;
-      cur.y += (tgt.y - cur.y) * 0.07;
-      // the opened scene: each layer slides by its depth (--d), near things more than far ones.
-      // Only write when the value really changes: every write restyles the whole stage.
-      const tx = cur.x.toFixed(3), ty = cur.y.toFixed(3);
-      if (tx !== shown.x || ty !== shown.y) {
-        shown.x = tx; shown.y = ty;
-        hero.style.setProperty("--tx", tx);
-        hero.style.setProperty("--ty", ty);
-      }
-    };
-    gsap.ticker.add(tick);
-    window.addEventListener("deviceorientation", onTilt);
-    window.addEventListener("pointermove", onPointer);
-    return () => {
-      gsap.ticker.remove(tick);
-      window.removeEventListener("deviceorientation", onTilt);
-      window.removeEventListener("pointermove", onPointer);
-    };
-  }, []);
+  // (no cursor, tilt or drift movement on the front page: the cover and the stage stay still)
 
   const open = useCallback(() => {
     if (opened || !ready) return;
@@ -175,24 +156,32 @@ export default function Opening() {
       },
     });
     if (reduce) tl.timeScale(20);
+    // the untie film: frames laid out 6 across, 5 down
+    const film = { f: 0 };
+    const filmEl = q(`.${s.untie}`)[0] as HTMLElement | undefined;
+    const showFrame = (i: number) => {
+      if (filmEl) filmEl.style.backgroundPosition = `${(i % 6) * 20}% ${Math.floor(i / 6) * 25}%`;
+    };
 
     // slow and soft: every move eases in and out, and each beat overlaps the next (about 15 s in all)
     tl.to(q(`.${s.hint}`), { autoAlpha: 0, duration: 0.6, ease: "sine.out" })
-      // first the bow comes undone: the loops slip through the knot, the tails fall, the ribbon is drawn away
-      .to(q(`.${s.knot}`), { scaleY: 0.55, autoAlpha: 0, duration: 1.1, ease: "sine.in" }, 0.5)
-      .to(q(`.${s.loopL}`), { scale: 0.12, rotate: 24, autoAlpha: 0, duration: 1.3, ease: "sine.in" }, 0.3)
-      .to(q(`.${s.loopR}`), { scale: 0.12, rotate: -24, autoAlpha: 0, duration: 1.3, ease: "sine.in" }, 0.3)
-      .to(q(`.${s.tailL}`), { y: 110, rotate: 16, autoAlpha: 0, duration: 1.4, ease: "power1.in" }, 0.7)
-      .to(q(`.${s.tailR}`), { y: 110, rotate: -16, autoAlpha: 0, duration: 1.4, ease: "power1.in" }, 0.7);
-    // the untied ribbon goes slack: each half is a chain of short pieces hanging from its far end (round the
+      // the bow is untied as one continuous motion of cloth (30 rendered frames): the right tail is drawn
+      // out and grows as the right loop runs through the knot into it, then the left; the knot opens and
+      // the freed ends swing loose and fall. The sharp still bow hands over to the film's first frame,
+      // which is the same pose.
+      .set(q(`.${s.bowStill}`), { autoAlpha: 0 }, 0.3)
+      .set(q(`.${s.untie}`), { autoAlpha: 1 }, 0.3)
+      .to(film, { f: UNTIE_FRAMES - 1, duration: 2.4, ease: "none", onUpdate: () => showFrame(Math.round(film.f)) }, 0.3)
+      .to(q(`.${s.untie}`), { y: 90, autoAlpha: 0, duration: 0.55, ease: "power2.in" }, 2.3);
+    // the untied aronai goes slack: each half is a chain of short pieces hanging from its far end (round the
     // door edge). Its free end sags first, then the whole length swings down, the wave running out to the
     // tip, and it slips off the doors.
     for (const [side, sg] of [[s.ribbonL, 1], [s.ribbonR, -1]] as const) {
       const segs = q(`.${side} .${s.rseg}`);
-      tl.to(segs, { rotate: (k: number) => sg * (1 + 0.8 * k), duration: 0.8, ease: "sine.in" }, 0.8)
-        .to(segs[0], { rotate: sg * 64, duration: 1.7, ease: "power2.in" }, 1.5)
-        .to(segs.slice(1), { rotate: (k: number) => sg * (3 - 0.3 * k), duration: 1.5, ease: "sine.inOut", stagger: 0.07 }, 1.6)
-        .to(q(`.${side}`), { y: 280, autoAlpha: 0, duration: 1.2, ease: "power2.in" }, 2.6);
+      tl.to(segs, { rotate: (k: number) => sg * (1 + 0.8 * k), duration: 0.8, ease: "sine.in" }, 1.9)
+        .to(segs[0], { rotate: sg * 64, duration: 1.7, ease: "power2.in" }, 2.5)
+        .to(segs.slice(1), { rotate: (k: number) => sg * (3 - 0.3 * k), duration: 1.5, ease: "sine.inOut", stagger: 0.07 }, 2.6)
+        .to(q(`.${side}`), { y: 280, autoAlpha: 0, duration: 1.2, ease: "power2.in" }, 3.5);
     }
     tl
       // the butterflies resting on the doors take off first
@@ -215,6 +204,15 @@ export default function Opening() {
       .to(q(`.${s.leafShade}`), { opacity: 0.8, duration: 4.2, ease: "sine.inOut" }, 4.5)
       .to(q(`.${s.doorsBack}`), { opacity: 0, duration: 2.6, ease: "sine.inOut" }, 5.0)
       .fromTo(q(`.${s.stage}`), { scale: 1.1 }, { scale: 1, duration: 5.4, ease: "sine.out" }, 4.5)
+      // the curtain bow comes undone: the loops pull through the knot, the tails loosen, then it drops
+      // to the floor with its tails trailing up behind it, and is gone as the curtains part
+      .to(q(`.${s.cbowBody}`), { scaleX: 0.3, scaleY: 0.72, duration: 0.6, ease: "power2.in" }, 6.4)
+      .to(q(`.${s.cbowTailL}`), { rotate: 9, duration: 0.5, ease: "sine.out" }, 6.5)
+      .to(q(`.${s.cbowTailR}`), { rotate: -9, duration: 0.5, ease: "sine.out" }, 6.5)
+      .to(q(`.${s.cbow}`), { y: () => (root.current?.clientHeight ?? 700) * 0.62, rotate: 16, duration: 1.15, ease: "power2.in" }, 6.95)
+      .to(q(`.${s.cbowTailL}`), { rotate: 62, duration: 1.15, ease: "power2.in" }, 6.95)
+      .to(q(`.${s.cbowTailR}`), { rotate: -48, duration: 1.15, ease: "power2.in" }, 6.95)
+      .to(q(`.${s.cbow}`), { autoAlpha: 0, duration: 0.45, ease: "sine.in" }, 7.75)
       // curtains: glide through the pre-rendered sequence
       .to(frame.current, { i: FRAMES - 1, duration: 4.6, ease: "sine.inOut", onUpdate: draw }, 7.3)
       // swags settle in one by one, centre pair first
@@ -238,8 +236,7 @@ export default function Opening() {
       // names arrive softly, as if coming into focus
       .fromTo(q(`.${s.names} > *`), { autoAlpha: 0, y: 16, filter: "blur(6px)" }, {
         autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 1.8, stagger: 0.2, ease: "power2.out", clearProps: "filter",
-      }, 12.6)
-      .fromTo(q(`.${s.scroll}`), { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: "sine.out" }, ">-0.4");
+      }, 12.6)      .fromTo(q(`.${s.scroll}`), { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2, ease: "sine.out" }, ">-0.4");
   }, [opened, ready, lenis, draw]);
 
   return (
@@ -262,8 +259,16 @@ export default function Opening() {
           <p className={s.parents}>{couple.bride.parents}</p>
           <p className={`caps ${s.date}`}>{couple.dateLabel}</p>
         </div>
-        <div className={`${s.altar} depth`} style={{ "--d": 6 } as React.CSSProperties} data-speed="0.12">
-          <img src="/art/altar.webp" alt="The Bathou altar: a sijou plant in its bamboo fence" width={600} height={612} />
+        {/* aronai hung on the walls either side of the shrine (placed by the effect above) */}
+        {[0, 1].map((i) => (
+          <img key={i} ref={(el) => { hangs.current[i] = el; }} className={`${s.hang} ${i ? s.hangR : ""}`}
+            src="/art/aronai-hang.webp" alt="" aria-hidden />
+        ))}
+        <div ref={altarRef} className={`${s.altar} depth`} style={{ "--d": 6 } as React.CSSProperties} data-speed="0.12">
+          {/* the shrine's frame is dressed with aronai: two festoons, and an end with its fringe at each post */}
+          <img src="/art/altar.webp" alt="The Bathou altar: a sijou plant in its bamboo fence, its frame hung with aronai" width={600} height={621} />
+          {/* the two ends of the aronai knotted round the fence, waving in a breeze (a 32-frame loop) */}
+          <span className={s.fenceTail} aria-hidden />
           <div className={s.lamps}>
             {Array.from({ length: 5 }, (_, i) => (
               <div className={s.lamp} key={i}>
@@ -274,6 +279,12 @@ export default function Opening() {
           </div>
         </div>
         <canvas ref={canvas} className={`${s.curtains} depth`} style={{ "--d": 9 } as React.CSSProperties} aria-hidden />
+        {/* an aronai bow tying the closed curtains together; it comes undone and falls as they open */}
+        <div className={s.cbow} aria-hidden>
+          <img className={s.cbowTailL} src="/art/cbow-tail-l.webp" alt="" />
+          <img className={s.cbowTailR} src="/art/cbow-tail-r.webp" alt="" />
+          <img className={s.cbowBody} src="/art/cbow-body.webp" alt="" />
+        </div>
         <div className={`${s.valance} depth`} style={{ "--d": 11 } as React.CSSProperties} aria-hidden>
           {[25, 75].map((x) => <img key={x} className={s.strand} src="/art/strand.webp" alt="" style={{ left: `${x}%` }} />)}
           {[0, 1, 2, 3].map((i) => <img key={i} className={s.swag} src="/art/swag.webp" alt="" style={{ left: `${i * 25 - 4}%` }} />)}
@@ -294,22 +305,20 @@ export default function Opening() {
 
       <div className={s.doors}>
         <div className={s.doorsBack} />
-        {/* the cover is built in layers at real depths: cloth, sewn-on strips, the bow, the badge, butterflies.
-            The rig turns a little with the phone, so high things move over their own shadows. */}
+        {/* the cover is built in layers at real depths: cloth, sewn-on strips, the aronai bow, the badge,
+            butterflies */}
         <div className={s.rig} ref={rig}>
           <Leaf side="L" />
           <Leaf side="R" />
           <div className={s.seam} />
           <span className={s.spark} aria-hidden />
-          {/* a yellow aronai ribbon tied in a bow; the badge sits on it like a seal */}
+          {/* one aronai tied round the doors in a bow under the badge (Blender renders: the band, and the
+              bow's two loops, knot and two tails on one frame, so it can be untied piece by piece) */}
           <div className={s.bow} aria-hidden>
             <Ribbon side="L" />
             <Ribbon side="R" />
-            <img className={`${s.tail} ${s.tailL}`} src="/art/bow-tail.webp" alt="" />
-            <img className={`${s.tail} ${s.tailR}`} src="/art/bow-tail-r.webp" alt="" />
-            <img className={`${s.loop} ${s.loopL}`} src="/art/bow-loop.webp" alt="" />
-            <img className={`${s.loop} ${s.loopR}`} src="/art/bow-loop-r.webp" alt="" />
-            <img className={s.knot} src="/art/bow-knot.webp" alt="" />
+            <img className={s.bowStill} src="/art/cover-bow.webp" alt="" />
+            <span className={s.untie} />
           </div>
           {[0, 1, 2].map((i) => (
             <div key={i} className={`${s.coverFly} ${s[`cf${i}`]}`} aria-hidden>

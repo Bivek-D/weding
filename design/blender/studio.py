@@ -306,6 +306,151 @@ def dokhona_texture(w=2048, h=384, ground="#EE8A1E", border="#0F7A4A", thread="#
     return rgba, hrgba
 
 
+def aronai_texture(L_mm, W_mm, ppm=6.0, seed=0, u0=0.0, u1=1.0):
+    """One whole handloom aronai, thread by thread, mapped over the cloth: u along its length (0..1, one
+    end to the other), v across its width. u0..u1 picks the part of the cloth this texture covers
+    (e.g. .5..1 for a hanging end).
+    - plain-weave body in deep red: warp and weft threads of slightly different reds, slubs
+    - the real aronai plan in gold extra-weft (raised floats): diamond chain at the outer edges, tall
+      fern-hatched hajw sawtooth on both edges, a double rule, a column of peacock-eye medallions with
+      paired small diamonds between, and plain striped ends for the fringe
+    Returns (colour, height, thread-mask) as H x W x 4 float arrays (row 0 = v 1)."""
+    r = np.random.default_rng(seed)
+    w = int(round((u1 - u0) * L_mm * ppm))
+    h = int(round(W_mm * ppm))
+    col_ = lambda hx: np.array([int(hx[i:i + 2], 16) for i in (1, 3, 5)]) / 255     # noqa: E731
+    RED, RED2, YEL, GRN, DARK = col_("#A3121B"), col_("#B81C22"), col_("#E8B62A"), col_("#1D6B3A"), col_("#2A0E0C")
+    X = np.arange(w)[None, :] / ppm + u0 * L_mm           # mm along the length (from end A)
+    Y = np.arange(h)[:, None] / ppm                       # mm across
+    X = np.broadcast_to(X, (h, w)); Y = np.broadcast_to(Y, (h, w))
+    # thread spacing, mm: a real one (45 cm wide) has about a thousand warp threads; a small one here is
+    # the same cloth in miniature, so its threads shrink with it
+    pitch = min(.42, W_mm * .0032)
+    wi = np.floor(Y / pitch).astype(int)                  # warp thread index (runs along the length)
+    fi = np.floor(X / pitch).astype(int)                  # weft pick index
+    over = (wi + fi) % 2 == 0                             # plain weave: warp on top here
+    # per-thread shade, plus slubs (thicker, lighter stretches) along some threads
+    warp_sh = r.normal(0, .05, wi.max() + 2)[wi]
+    weft_sh = r.normal(0, .04, fi.max() + 2)[fi]
+    slub = np.clip(np.sin(X * .9 + r.uniform(0, 6, wi.max() + 2)[wi] * 7) - .93, 0, 1) * 1.6
+    col = np.where(over[..., None], RED, RED2) * (1 + np.where(over, warp_sh, weft_sh) + slub * .25)[..., None]
+    # thread roundness: each crossing a little dome
+    fx = (X / pitch) % 1 - .5; fy = (Y / pitch) % 1 - .5
+    hgt = .45 + .22 * np.cos(np.pi * np.where(over, fy, fx)) + .1 * slub
+    mask = np.zeros((h, w))
+
+    def paint(m, c, lift=.45, floats=True):
+        nonlocal col, hgt, mask
+        if floats:      # extra-weft floats run across the width: brighter on their crowns, dark between picks
+            sh = .86 + .2 * np.cos(np.pi * ((X / (pitch * 1.0)) % 1 - .5))
+            cc = c[None, None, :] * sh[..., None]
+        else:
+            cc = c[None, None, :] * np.ones((h, w, 1))
+        col = np.where(m[..., None], cc, col)
+        hgt = np.where(m, hgt + lift, hgt)
+        mask = np.where(m, 1.0, mask)
+
+    # The real anatomy (references/bodo-research.md, "Anatomy of an aronai"), every motif snapped to the
+    # weave's grid so its edges step like woven ones; one contrast thread (gold) on the red ground:
+    #   outer edge: a chain of small diamonds | hajw agor: tall sawtooth triangles on both edges pointing
+    #   in, filled with fern-like hatching | a thin double rule | centre column: peacock-eye medallions of
+    #   dot rings and tiny diamonds round a flower, small paired motifs between | ends: plain ground with
+    #   fine stripes, then the fringe (the borders and column stop before the ends)
+    c = max(pitch * 2, W_mm * .011)                       # motif cell (a few threads)
+    qX = (np.floor(X / c) + .5) * c                       # snapped to the cell grid
+    qY = (np.floor(Y / c) + .5) * c
+    e = np.minimum(X, L_mm - X)                           # mm from the nearer end
+    body = e > W_mm * .62
+    # ends: plain heading, then fine stripes across the cloth
+    stripe = (e > W_mm * .1) & (e < W_mm * .5) & (((e - W_mm * .1) % (W_mm * .055)) < W_mm * .013)
+    paint(stripe, YEL, .3)
+    paint((e > W_mm * .56) & (e < W_mm * .58), YEL, .3)
+    for edge in (0, 1):
+        d = qY if edge == 0 else W_mm - qY                # distance in from this long edge
+        dr = Y if edge == 0 else W_mm - Y
+        paint(body & (dr < W_mm * .022), DARK, .15, False)            # selvedge
+        # the outer chain of small diamonds
+        per = W_mm * .05
+        cx = (qX % per) - per / 2
+        cy = d - W_mm * .048
+        dm = np.abs(cx) + np.abs(cy)
+        paint(body & (dm <= W_mm * .022) & (dm >= W_mm * .01), YEL, .4)
+        paint(body & (dr > W_mm * .078) & (dr < W_mm * .088), YEL, .3)  # rule under the chain
+        # hajw agor: tall triangles, base at the rule, apex well into the cloth, hatched like fern fronds
+        base, top = W_mm * .095, W_mm * .3
+        per = W_mm * .15
+        tx = (qX % per) - per / 2
+        hgt_ = (d - base) / (top - base)                  # 0 at the base, 1 at the apex
+        half = per * .48 * (1 - hgt_)
+        inside = body & (hgt_ >= 0) & (hgt_ <= 1) & (np.abs(tx) <= half)
+        outline = inside & (np.abs(tx) >= half - c * 1.1)
+        spine = inside & (np.abs(tx) < c * .6)
+        frond = inside & ((((np.abs(tx) + (d - base) * .7) / (c * 2.2)) % 1) < .42)
+        paint(outline | spine | frond, YEL, .45)
+        # the thin double rule inside the hajw
+        paint(body & (dr > W_mm * .315) & (dr < W_mm * .325), YEL, .3)
+        paint(body & (dr > W_mm * .34) & (dr < W_mm * .35), YEL, .3)
+    # centre column: medallions, alternating with small paired motifs
+    P = W_mm * .5
+    k = np.floor((X - W_mm * .62) / P)
+    mx = ((X - W_mm * .62) % P) - P / 2
+    mqx = ((qX - W_mm * .62) % P) - P / 2
+    my = qY - W_mm / 2
+    col_ok = body & (e > W_mm * .9)
+    Rm = W_mm * .135
+    rr = np.sqrt(mqx ** 2 + my ** 2)
+    ang = np.arctan2(my, mqx)
+    med = col_ok & (k % 2 == 0)
+    # outer ring of dots, a solid ring, a ring of tiny diamonds, the flower at the centre
+    dots = med & (np.abs(rr - Rm) < c * .8) & (((ang / (2 * np.pi) * 22) % 1) < .45)
+    ring = med & (np.abs(rr - Rm * .78) < c * .55)
+    tiny = med & (np.abs(rr - Rm * .55) < c * .9) & (((ang / (2 * np.pi) * 12) % 1) < .3)
+    petal = med & (rr < Rm * .36) & (np.abs(np.cos(4 * ang)) * Rm * .36 > rr * .9)
+    eye = med & (rr < c * 1.1)
+    paint(dots | ring | tiny | petal | eye, YEL, .5)
+    # between medallions: a pair of small stepped diamonds side by side (birds' place in the real ones)
+    pair = col_ok & (k % 2 == 1)
+    for sgn in (-1, 1):
+        dd = np.abs(mqx) + np.abs(my - sgn * W_mm * .07)
+        paint(pair & (dd <= W_mm * .05) & (dd >= W_mm * .028), YEL, .45)
+        paint(pair & (dd <= c * .8), YEL, .4)
+    del mx
+    col = np.clip(col, 0, 1)
+    to4 = lambda a: np.dstack([a, np.ones((h, w))])       # noqa: E731
+    g = np.clip(hgt / 1.4, 0, 1)
+    return to4(col[::-1]), to4(np.repeat(g[::-1, :, None], 3, 2)), to4(np.repeat(mask[::-1, :, None], 3, 2))
+
+
+def mat_aronai(name, L_mm, W_mm, **kw):
+    """Handloom aronai: cotton body (matte, soft sheen at grazing light, a little light through it), the
+    yellow and green extra-weft threads silkier (smoother, brighter sheen), weave bump at thread scale."""
+    c, hg, mk = aronai_texture(L_mm, W_mm, **kw)
+    ims = {}
+    for k, arr in (("col", c), ("hgt", hg), ("msk", mk)):
+        im = image_from_array(f"{name}-{k}", arr)
+        if k != "col":
+            im.colorspace_settings.name = "Non-Color"
+        ims[k] = im
+    m, nt, b = _mat(name)
+    N, L = nt.nodes, nt.links
+    uv = N.new("ShaderNodeUVMap"); uv.uv_map = "UVMap"
+    t = {}
+    for k, im in ims.items():
+        n = N.new("ShaderNodeTexImage"); n.image = im; n.interpolation = "Cubic"; n.extension = "EXTEND"
+        L.new(uv.outputs[0], n.inputs[0]); t[k] = n
+    L.new(t["col"].outputs["Color"], b.inputs["Base Color"])
+    rr = N.new("ShaderNodeMapRange"); rr.inputs["To Min"].default_value = .7; rr.inputs["To Max"].default_value = .42
+    L.new(t["msk"].outputs["Color"], rr.inputs["Value"]); L.new(rr.outputs["Result"], b.inputs["Roughness"])
+    bump = N.new("ShaderNodeBump"); bump.inputs["Strength"].default_value = .55; bump.inputs["Distance"].default_value = .0004
+    L.new(t["hgt"].outputs["Color"], bump.inputs["Height"]); L.new(bump.outputs["Normal"], b.inputs["Normal"])
+    b.inputs["Sheen Weight"].default_value = .5
+    b.inputs["Sheen Roughness"].default_value = .45
+    b.inputs["Sheen Tint"].default_value = hexrgb("#FF9C84")
+    b.inputs["Subsurface Weight"].default_value = .1
+    b.inputs["Subsurface Radius"].default_value = (.003, .001, .0008)
+    return m
+
+
 def mat_cloth(name="dokhona", **kw):
     """Silk-cotton dokhona: the woven texture, a weave bump, sheen and a little light through the cloth."""
     rgba, hrgba = dokhona_texture(**kw)

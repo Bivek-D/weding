@@ -29,6 +29,24 @@
 .bushR { right: -16%; }
 .strand { visibility: hidden; position: absolute; top: 34px; width: 20px; height: 150px; margin-left: -10px; filter: drop-shadow(4px 6px 4px rgb(60 25 5 / .35)); }
 
+/* aronai hung on the walls beside the shrine (left, top and width set in Opening.tsx); each sways a
+   little from its nail, which sits 2% down the image */
+.hang {
+  position: absolute; z-index: 1; height: auto; max-width: none; pointer-events: none;
+  transform-origin: 50% 2.2%; animation: hangSway 5.5s ease-in-out infinite alternate;
+  filter: drop-shadow(3px 6px 4px rgb(60 30 10 / .28));
+}
+.hangR { scale: -1 1; animation-delay: -2.7s; }
+@keyframes hangSway { from { rotate: -1.4deg; } to { rotate: 1.4deg; } }
+@media (prefers-reduced-motion: reduce) { .hang { animation: none; } }
+
+/* the aronai bow tying the closed curtains: three layers on one frame (tails behind, loops and knot in
+   front); the tails turn about the knot, 27% down the frame */
+.cbow { position: absolute; z-index: 3; left: 50%; top: 46%; width: 150px; height: 132px; margin-left: -75px; pointer-events: none;
+  transform-origin: 50% 27%; filter: drop-shadow(4px 8px 6px rgb(60 20 5 / .35)); }
+.cbow > img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; transform-origin: 50% 27%; }
+.cbowBody, .cbowTailL, .cbowTailR { will-change: transform; }
+
 /* ---------------------------------------------------------------- names */
 .names {
   position: absolute; z-index: 2; left: 50%; top: max(100px, 13svh); transform: translateX(-50%);
@@ -60,6 +78,16 @@
   content: ""; position: absolute; left: -8%; right: -8%; bottom: -1%; height: 9%;
   background: radial-gradient(50% 50% at 50% 50%, rgb(60 30 5 / .4), transparent 70%);
 }
+/* the fence aronai's waving ends: 32 frames side by side (design/blender/publish.py altar-tail prints
+   this box); stepping the strip plays the loop. The last position is 32/31 of the way so each of the
+   32 steps lands exactly on a frame. */
+.fenceTail {
+  position: absolute; left: 40.667%; top: 73.108%; width: 19%; height: 18.841%; pointer-events: none;
+  background: url(/art/altar-tail.webp) 0 0 / 3200% 100% no-repeat;
+  animation: aronaiWave 2.8s steps(32) infinite;
+}
+@keyframes aronaiWave { to { background-position-x: 103.226%; } }
+@media (prefers-reduced-motion: reduce) { .fenceTail { animation: none; } }
 .lamps { position: absolute; left: 22%; right: 22%; bottom: 2%; display: flex; justify-content: space-between; }
 .lamp { position: relative; width: 24px; height: 33px; }
 .lampImg { width: 100%; height: auto; filter: brightness(.45) saturate(.25); }
@@ -151,27 +179,29 @@
 .clipR { left: 0; }
 /* the bow: tied just under the badge, raised off the cloth, casting its own shadow */
 .bow {
-  position: absolute; left: 50%; top: calc(50% + 108px); width: 0; height: 0;
+  position: absolute; left: 50%; top: min(calc(50% + 142px), calc(100% - 200px)); width: 0; height: 0;   /* the knot just clear of the badge, the fringe on screen */
   transform: translateZ(20px); filter: drop-shadow(6px 10px 7px rgb(5 25 15 / .45));
 }
 /* each half of the ribbon is a chain of ten 26px pieces hanging from its outer end (round the door edge);
    a piece is 1px longer than its step so the joints never open */
-.ribbon { position: absolute; top: -14px; width: 260px; height: 28px; }
+/* the band is the aronai's woven body (cover-band.webp: 520 x 32 css px, both halves end to end) */
+.ribbon { position: absolute; top: -16px; width: 260px; height: 32px; }
 .ribbonL { right: 0; }
 .ribbonR { left: 0; }
-.rseg { position: absolute; top: 0; width: 27px; height: 28px; background: url(/art/ribbon.webp) 0 0 / auto 28px repeat-x; }
+.rseg { position: absolute; top: 0; width: 27px; height: 32px; background: url(/art/cover-band.webp) 0 0 / 520px 32px no-repeat; }
 .ribbonL .rseg { left: 0; transform-origin: 0 50%; background-position-x: calc(var(--k) * -26px); }
 .ribbonL .rseg .rseg { left: 26px; }
-.ribbonR .rseg { right: 0; transform-origin: 100% 50%; background-position-x: calc(var(--k) * 26px - 233px); }
+.ribbonR .rseg { right: 0; transform-origin: 100% 50%; background-position-x: calc(var(--k) * 26px - 493px); }
 .ribbonR .rseg .rseg { right: 26px; left: auto; }
-.loop { position: absolute; top: -59px; width: 150px; height: 115px; }
-.loopL { left: -143px; transform-origin: 95% 51%; }
-.loopR { left: -7px; transform-origin: 5% 51%; }
-.tail { position: absolute; top: -6px; width: 100px; height: 165px; animation: tailSway 4.5s ease-in-out infinite alternate; }
-.tailL { left: -93px; transform-origin: 93% 4%; }
-.tailR { left: -7px; transform-origin: 7% 4%; animation-delay: -2.2s; }
-@keyframes tailSway { from { rotate: -2.5deg; } to { rotate: 2.5deg; } }
-.knot { position: absolute; left: -22px; top: -27px; width: 45px; height: 55px; }
+/* the bow at rest: the untie film's first pose, sharp (cover-bow.webp, 2x); its knot sits on the band's
+   centre (160, 80 in its 320 x 500 frame) */
+.bowStill { position: absolute; left: -160px; top: -80px; width: 320px; height: 500px; max-width: none; }
+/* the untie film: 30 frames of 320 x 500 (knot at 160, 80, same as the still), 6 across and 5 down;
+   Opening.tsx steps background-position through them */
+.untie {
+  position: absolute; left: -160px; top: -80px; width: 320px; height: 500px; visibility: hidden;
+  background: url(/art/cover-untie.webp) 0 0 / 600% 500% no-repeat;
+}
 .bow img { max-width: none; }
 .plaqueShadow {
   position: absolute; top: calc(50% - 115px - 30px + 22px); width: 260px; height: 290px;

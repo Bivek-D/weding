@@ -239,7 +239,8 @@ export function createCurtain(canvas: HTMLCanvasElement): Curtain | null {
     dispose: () => {
       textures.forEach((x) => gl.deleteTexture(x));
       gl.deleteProgram(prog);
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      // no loseContext(): the canvas keeps the same context, and a remount (React's development double
+      // mount, Fast Refresh) would get it back lost, fail the shader and fall back to the frames
     },
   };
 }

@@ -1,4 +1,4 @@
-﻿"""The day's timeline: one small object for each moment, sitting on the gold thread (Cycles, GPU).
+"""The day's timeline: one small object for each moment, sitting on the gold thread (Cycles, GPU).
 No floor shadow: the page lifts them off the paper itself (Raised), like the other beads.
 
 Run:  blender.cmd -b -P render_steps.py -- arrive haba meal reception dinner

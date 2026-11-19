@@ -91,8 +91,27 @@ def fence(mat_pole, mat_band, R=24):
         S.tube(f"band{k}", pts, [.0042] * len(pts), mat_band, sides=10, profile=lambda th: 1 + .5 * abs(math.sin(th)), cap=False)
 
 
-def drop_cloth(name, top_cm, length_cm, width_cm, mat, side):
-    """A cloth end falling straight down from the bar, in soft vertical folds that open toward the hem."""
+def hem_fringe(ob, nx, ny, mat, length=.022, groups=9):
+    """A handloom warp fringe along the bottom row of a drop_cloth: twisted groups of threads, each knotted
+    just under the hem."""
+    vs = [ob.matrix_world @ ob.data.vertices[(ny - 1) * nx + i].co for i in range(nx)]
+    for g in range(groups):
+        f = (g + .5) / groups * (nx - 1)
+        i0 = int(f)
+        base = vs[i0].lerp(vs[min(i0 + 1, nx - 1)], f - i0)
+        kn = S.lathe(f"{ob.name}-k{g}", [(0, -.0016), (.0017, -.0008), (.0018, .0006), (0, .0016)], mat, seg=10)
+        kn.location = base + Vector((0, 0, -.003))
+        Lg = length * (1 + rng.uniform(-.12, .12))
+        sway = Vector((rng.uniform(-1, 1) * Lg * .1, rng.uniform(-1, 1) * Lg * .06, 0))
+        for th in range(3):
+            o = Vector(((th - 1) * .0007, 0, 0))
+            pts = [base + o * (1 - u * .6) + Vector((0, 0, -Lg * u)) + sway * u * u for u in np.linspace(0, 1, 8)]
+            S.tube(f"{ob.name}-f{g}-{th}", pts, [.0006] * 8, mat, sides=6)
+
+
+def drop_cloth(name, top_cm, length_cm, width_cm, mat, side, uv_full=False):
+    """A cloth end falling straight down from the bar, in soft vertical folds that open toward the hem.
+    uv_full: u runs 0 (top) .. 1 (hem) for a whole-cloth texture (mat_aronai) instead of repeating."""
     nx, ny = 26, 60
     verts, faces, uvs = [], [], []
     for j in range(ny):
@@ -102,7 +121,7 @@ def drop_cloth(name, top_cm, length_cm, width_cm, mat, side):
             x = (s - .5) * width_cm * (1 + .18 * t)
             fold = (1.1 + 1.6 * t) * math.sin(s * math.pi * 5 + .6) * (.4 + .6 * t)
             verts.append(P(top_cm[0] + x * .95, top_cm[1] - t * length_cm, top_cm[2] + fold + 1.5 * t))
-            uvs.append((t * length_cm / 40, s))
+            uvs.append((t if uv_full else t * length_cm / 40, s))
     for j in range(ny - 1):
         for i in range(nx - 1):
             a = j * nx + i
@@ -160,14 +179,20 @@ def altar():
     bar_col = S.bamboo_pole("bar-col", P(-49, 94, -14), P(49, 94, -14), .013, m_bamboo)
     bar_col.hide_render = True
 
-    # dokhona swags between the posts and the centre, festooned; a cloth end falling at each post
+    # aronai festooned between the posts and the centre (each a whole cloth, u 0..1 along it); an aronai
+    # end falling at each post, its end panel and warp fringe at the bottom
     cloths = []
-    for a, b in ((-45, 0), (0, 45)):
-        ob, f = S.cloth_strip(f"swag{a}", P(a, 92.6, -12.4), P(b, 92.6, -12.4), length=.62, width=.13, mat=m_cloth,
-                              nx=120, ny=22, gather=.22, frames=90, uv_repeat=1, bend=.4)
+    for k, (a, b) in enumerate(((-45, 0), (0, 45))):
+        m_ar = S.mat_aronai(f"aronai-swag{k}", 620, 130, ppm=5, seed=10 + k)
+        ob, f = S.cloth_strip(f"swag{a}", P(a, 92.6, -12.4), P(b, 92.6, -12.4), length=.62, width=.13, mat=m_ar,
+                              nx=120, ny=22, gather=.22, frames=90, uv_repeat=.4 / .62, bend=.4)
         cloths.append((ob, f))
-    for x in (-44, 44):
-        drop_cloth(f"drop{x}", (x + (1.8 if x > 0 else -1.8), 93, -12), 36, 11, m_cloth, x)
+    fringe_m = S.mat_plain("aronai-fringe", "#A3121B", rough=.7, sheen=.5)
+    for k, x in enumerate((-44, 44)):
+        # the texture covers the hanging half of a 72 cm cloth: plain body at the bar, the end panel below
+        m_end = S.mat_aronai(f"aronai-end{k}", 720, 110, ppm=5, seed=20 + k, u0=.5, u1=1.0)
+        ob = drop_cloth(f"drop{x}", (x + (1.8 if x > 0 else -1.8), 93, -12), 36, 11, m_end, x, uv_full=True)
+        hem_fringe(ob, 26, 60, fringe_m)
 
     # a dokhona tied round the front of the fence, resting on it
     R = 24
@@ -175,8 +200,9 @@ def altar():
     col.hide_render = True
     a0, a1 = -1.15, 1.15
     A, B = P(R * 1.05 * math.sin(a0), 27.5, R * 1.05 * math.cos(a0)), P(R * 1.05 * math.sin(a1), 27.5, R * 1.05 * math.cos(a1))
-    ob, f = S.cloth_strip("front", A, B, length=.62, width=.1, mat=m_cloth, nx=130, ny=18, gather=.3, frames=90,
-                          colliders=[col], bend=.4)
+    m_front = S.mat_aronai("aronai-fence", 620, 100, ppm=6, seed=31)
+    ob, f = S.cloth_strip("front", A, B, length=.62, width=.1, mat=m_front, nx=130, ny=18, gather=.3, frames=90,
+                          colliders=[col], bend=.4, uv_repeat=.4 / .62)
     # start it on the arc round the fence instead of the straight chord through it
     vs = ob.data.vertices
     nx, ny = 130, 18
@@ -206,9 +232,70 @@ def altar():
             items.append(((x + rng.uniform(-4.5, 4.5), 6 + rng.uniform(0, 2.5), 26 + rng.uniform(-4, 4)), 2.7))
     marigold_set(mari, m_mari, items)
 
+    # the aronai round the fence is knotted at the front; its two ends hang down and wave (rendered
+    # separately below as a loop). Here they are only shadow casters, posed at the loop's first frame.
+    knot_m = S.mat_plain("aronai-knot", "#8C1018", rough=.75, sheen=.25)
+    # the knot: a flattened, twisted wrap of the cloth (a few overlapping turns), not a ball
+    for i, (dx, dz, rot, sc) in enumerate(((-.6, 0, .5, 1.0), (.7, .2, -.4, .95), (0, .5, 0, .8))):
+        kn = S.lathe(f"fence-knot{i}", [(0, -.016), (.012, -.013), (.016, -.003), (.015, .008), (.009, .014), (0, .015)], knot_m, seg=24)
+        kn.location = P(dx, 22.5, R * 1.06 + 1.4 + dz)
+        kn.rotation_euler = (math.pi / 2, rot, 0)
+        kn.scale = (1.25 * sc, .9 * sc, .55)
+    for i in range(3):          # the wrap's folds
+        S.tube(f"knot-fold{i}", [P(-1.6, 22.5 + (i - 1) * .9, R * 1.06 + 2.1), P(0, 22.7 + (i - 1) * .7, R * 1.06 + 2.5),
+                                 P(1.6, 22.5 + (i - 1) * .9, R * 1.06 + 2.1)], [.0028] * 3, knot_m, sides=10)
+    tail_mats = [S.mat_aronai(f"aronai-tail{k}", 400, 45, ppm=12, seed=40 + k, u0=.6, u1=1.0) for k in range(2)]
+    shadow_only = fence_tails(0.0, tail_mats, knot_m, R)
+    for o in shadow_only:
+        o.visible_camera = False
+
     S.key_light(target=P(0, 40, 0), dist=3.0, size=2.0, energy=380, az=-122, el=38)
     S.camera(P(0, 92, 296), P(0, 42, 0), 30, (600, 860))
     S.render("altar")
+
+    # the waving ends: the same camera and light, everything else still there (lighting and shadows on
+    # the cloth) but hidden from the camera, the floor catcher off; one frame per step of the loop
+    for o in shadow_only:
+        S.bpy.data.objects.remove(o, do_unlink=True)
+    for o in S.bpy.data.objects:
+        if o.type == "MESH":
+            o.visible_camera = False
+            o.is_shadow_catcher = False
+    S.bpy.context.scene.cycles.samples = 128
+    for fr in range(TAIL_FRAMES):
+        obs = fence_tails(fr / TAIL_FRAMES, tail_mats, knot_m, R)
+        S.render(f"altar-tail-{fr:02d}")
+        for o in obs:
+            S.bpy.data.objects.remove(o, do_unlink=True)
+
+
+TAIL_FRAMES = 32
+
+
+def fence_tails(phase, mats, cord, R):
+    """The two ends of the fence aronai hanging from the knot, at one moment of a seamless loop: a breeze
+    sends a wave down each from the knot to the fringe (the second a little behind the first), so they
+    sway out, flutter toward and away from us, and turn as the wave passes. Returns the new objects."""
+    import render_aronai as RA
+    before = set(S.bpy.data.objects)
+    tw = 2 * math.pi
+    W = .045
+    for k, side in enumerate((-1, 1)):
+        ph = tw * phase + k * 1.1
+        Lt = 16.0 if k == 0 else 14.5
+        pts = []
+        for u in np.linspace(0, 1, 70):
+            sway = 2.4 * u ** 1.6 * math.sin(ph - 5.2 * u)            # side to side, growing to the end
+            flut = 1.3 * u ** 1.4 * math.sin(ph * 1 + 1.3 - 4.4 * u)   # toward and away from us
+            x = side * (1.2 + 3.2 * u) + sway
+            y = 21.0 - Lt * u + .5 * u * u * abs(math.sin(ph - 5.2 * u))
+            z = R * 1.06 + 2.4 + 1.2 * u + flut
+            pts.append(P(x, y, z))
+        ob, ends = RA.scarf(f"tail{k}", pts, W, base_normal=(0, -1, 0))
+        ob.data.materials.append(mats[k])
+        p, t, sd = ends[1]
+        RA.warp_fringe(f"tf{k}", p, t, sd, W, .022, rng=np.random.default_rng(70 + k), cord=cord)
+    return [o for o in S.bpy.data.objects if o not in before]
 
 
 # ------------------------------------------------------------------ lamps
