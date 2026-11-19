@@ -100,8 +100,8 @@ def altar_tail():
           f"width: {w / aw * 100:.3f}%; height: {h / ah * 100:.3f}%; }}")
 
 
-def cover_untie(cols=6):
-    """out/cover-untie-00..29.png (320 x 500 each) into one grid sprite, cols across, for the page to step
+def cover_untie(cols=8):
+    """out/cover-untie-00..47.png (320 x 620 each) into one grid sprite, cols across, for the page to step
     through (opening.module.css .untie)."""
     frames = sorted(f for f in os.listdir(OUT) if f.startswith("cover-untie-"))
     imgs = [clean(Image.open(os.path.join(OUT, f)).convert("RGBA")) for f in frames]
@@ -110,7 +110,7 @@ def cover_untie(cols=6):
     sheet = Image.new("RGBA", (w * cols, h * rows))
     for i, im in enumerate(imgs):
         sheet.paste(im, ((i % cols) * w, (i // cols) * h))
-    sheet.save(os.path.join(ART, "cover-untie.webp"), quality=86, method=6)
+    sheet.save(os.path.join(ART, "cover-untie.webp"), quality=78, method=6)
     print(f"published cover-untie.webp {sheet.size}: {len(imgs)} frames of {w}x{h}, {cols} x {rows}")
 
 

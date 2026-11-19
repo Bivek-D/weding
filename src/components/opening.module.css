@@ -180,12 +180,12 @@
 /* the bow: tied just under the badge, raised off the cloth, casting its own shadow */
 .bow {
   position: absolute; left: 50%; top: min(calc(50% + 142px), calc(100% - 200px)); width: 0; height: 0;   /* the knot just clear of the badge, the fringe on screen */
-  transform: translateZ(20px); filter: drop-shadow(6px 10px 7px rgb(5 25 15 / .45));
+  transform: translateZ(20px);   /* no shadow filter here: the bow's shadow is in its renders */
 }
 /* each half of the ribbon is a chain of ten 26px pieces hanging from its outer end (round the door edge);
    a piece is 1px longer than its step so the joints never open */
 /* the band is the aronai's woven body (cover-band.webp: 520 x 32 css px, both halves end to end) */
-.ribbon { position: absolute; top: -16px; width: 260px; height: 32px; }
+.ribbon { position: absolute; top: -16px; width: 260px; height: 32px; filter: drop-shadow(5px 8px 5px rgb(5 25 15 / .4)); }
 .ribbonL { right: 0; }
 .ribbonR { left: 0; }
 .rseg { position: absolute; top: 0; width: 27px; height: 32px; background: url(/art/cover-band.webp) 0 0 / 520px 32px no-repeat; }
@@ -193,15 +193,12 @@
 .ribbonL .rseg .rseg { left: 26px; }
 .ribbonR .rseg { right: 0; transform-origin: 100% 50%; background-position-x: calc(var(--k) * 26px - 493px); }
 .ribbonR .rseg .rseg { right: 26px; left: auto; }
-/* the bow at rest: the untie film's first pose, sharp (cover-bow.webp, 2x); its knot sits on the band's
-   centre (160, 80 in its 320 x 500 frame) */
-.bowStill { position: absolute; left: -160px; top: -80px; width: 320px; height: 500px; max-width: none; }
-/* the untie film: 30 frames of 320 x 500 (knot at 160, 80, same as the still), 6 across and 5 down;
-   Opening.tsx steps background-position through them */
-.untie {
-  position: absolute; left: -160px; top: -80px; width: 320px; height: 500px; visibility: hidden;
-  background: url(/art/cover-untie.webp) 0 0 / 600% 500% no-repeat;
-}
+/* the bow at rest: the untie film's first pose, sharp (cover-bow.webp, 2x), its shadow on the doors
+   included; its knot sits on the band's centre (160, 80 in its 320 x 620 frame) */
+.bowStill { position: absolute; left: -160px; top: -80px; width: 320px; height: 620px; max-width: none; }
+/* the untie film: 48 frames of 320 x 620 (knot at 160, 80, same as the still) from cover-untie.webp,
+   blended frame to frame on this canvas by Opening.tsx */
+.untieFilm { position: absolute; left: -160px; top: -80px; width: 320px; height: 620px; visibility: hidden; }
 .bow img { max-width: none; }
 .plaqueShadow {
   position: absolute; top: calc(50% - 115px - 30px + 22px); width: 260px; height: 290px;

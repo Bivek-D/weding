@@ -10,7 +10,7 @@ import { createCurtain, type Curtain } from "@/lib/curtainGL";
 import s from "./opening.module.css";
 
 const FRAMES = 36;
-const UNTIE_FRAMES = 30;     // design/blender/render_aronai.py -- untie
+const UNTIE_FRAMES = 48;     // design/blender/render_aronai.py -- untie
 const frameSrc = (i: number) => `/art/curtain/${String(i).padStart(2, "0")}.webp`;
 
 /** The cinematic opening: woven doors → curtain sequence (pre-rendered, drawn on a canvas) → swags,
@@ -23,6 +23,8 @@ export default function Opening() {
   const frames = useRef<HTMLImageElement[]>([]);
   const frame = useRef({ i: 0 });
   const [opened, setOpened] = useState(false);
+  const keep = useRef<HTMLImageElement[]>([]);
+  const filmCanvas = useRef<HTMLCanvasElement>(null);
   const altarRef = useRef<HTMLDivElement>(null);
   const hangs = useRef<(HTMLImageElement | null)[]>([]);
 
@@ -88,7 +90,11 @@ export default function Opening() {
   // set up the curtain (live WebGL, or the frame sequence as a fallback) and keep the canvas sized to the stage
   useEffect(() => {
     let done = false;
-    const go = () => { if (!done) { done = true; setReady(true); } };
+    // the bow's untie film (1 MB) and still are decoded before the cover can be tapped, so the first frames
+    // don't hitch; the Image objects are kept so the decoded bitmaps stay in memory
+    keep.current = ["/art/cover-untie.webp", "/art/cover-bow.webp"].map((src) => { const im = new Image(); im.src = src; return im; });
+    const decoded = Promise.all(keep.current.map((im) => im.decode().catch(() => {})));
+    const go = () => { decoded.then(() => { if (!done) { done = true; setReady(true); } }); };
     const curtain = canvas.current ? createCurtain(canvas.current) : null;
     gl.current = curtain;
     if (curtain) {
@@ -156,12 +162,29 @@ export default function Opening() {
       },
     });
     if (reduce) tl.timeScale(20);
-    // the untie film: frames laid out 6 across, 5 down
+    // the untie film: 48 frames of 320 x 620 laid out 8 across, 6 down, drawn on a canvas as a true linear
+    // blend of the two frames either side of the playhead ((1 - f) of one plus f of the next, added), so the
+    // motion is continuous and the soft shadow never stacks up or flickers between frames
     const film = { f: 0 };
-    const filmEl = q(`.${s.untie}`)[0] as HTMLElement | undefined;
-    const showFrame = (i: number) => {
-      if (filmEl) filmEl.style.backgroundPosition = `${(i % 6) * 20}% ${Math.floor(i / 6) * 25}%`;
+    const fc = filmCanvas.current;
+    const fctx = fc?.getContext("2d");
+    const sheet = keep.current[0];
+    const showFrame = (f: number) => {
+      if (!fc || !fctx || !sheet?.naturalWidth) return;
+      const i = Math.min(UNTIE_FRAMES - 1, Math.floor(f)), j = Math.min(UNTIE_FRAMES - 1, i + 1), k = f - i;
+      const draw = (n: number) => fctx.drawImage(sheet, (n % 8) * 320, Math.floor(n / 8) * 620, 320, 620, 0, 0, fc.width, fc.height);
+      fctx.clearRect(0, 0, fc.width, fc.height);
+      fctx.globalAlpha = 1 - k;
+      draw(i);
+      if (k > 0.01) {
+        fctx.globalCompositeOperation = "lighter";
+        fctx.globalAlpha = k;
+        draw(j);
+        fctx.globalCompositeOperation = "source-over";
+      }
+      fctx.globalAlpha = 1;
     };
+    showFrame(0);
 
     // slow and soft: every move eases in and out, and each beat overlaps the next (about 15 s in all)
     tl.to(q(`.${s.hint}`), { autoAlpha: 0, duration: 0.6, ease: "sine.out" })
@@ -169,19 +192,21 @@ export default function Opening() {
       // out and grows as the right loop runs through the knot into it, then the left; the knot opens and
       // the freed ends swing loose and fall. The sharp still bow hands over to the film's first frame,
       // which is the same pose.
+      // swapped in one frame (same pose): a cross-fade would show both shadows at once
+      .set(q(`.${s.untieFilm}`), { autoAlpha: 1 }, 0.3)
       .set(q(`.${s.bowStill}`), { autoAlpha: 0 }, 0.3)
-      .set(q(`.${s.untie}`), { autoAlpha: 1 }, 0.3)
-      .to(film, { f: UNTIE_FRAMES - 1, duration: 2.4, ease: "none", onUpdate: () => showFrame(Math.round(film.f)) }, 0.3)
-      .to(q(`.${s.untie}`), { y: 90, autoAlpha: 0, duration: 0.55, ease: "power2.in" }, 2.3);
+      .to(film, { f: UNTIE_FRAMES - 1, duration: 2.6, ease: "none", onUpdate: () => showFrame(film.f) }, 0.3)
+      // the freed ends keep falling past the film's last frame, and are gone
+      .to(q(`.${s.untieFilm}`), { y: 150, autoAlpha: 0, duration: 0.6, ease: "power1.in" }, 2.75);
     // the untied aronai goes slack: each half is a chain of short pieces hanging from its far end (round the
     // door edge). Its free end sags first, then the whole length swings down, the wave running out to the
     // tip, and it slips off the doors.
     for (const [side, sg] of [[s.ribbonL, 1], [s.ribbonR, -1]] as const) {
       const segs = q(`.${side} .${s.rseg}`);
-      tl.to(segs, { rotate: (k: number) => sg * (1 + 0.8 * k), duration: 0.8, ease: "sine.in" }, 1.9)
-        .to(segs[0], { rotate: sg * 64, duration: 1.7, ease: "power2.in" }, 2.5)
-        .to(segs.slice(1), { rotate: (k: number) => sg * (3 - 0.3 * k), duration: 1.5, ease: "sine.inOut", stagger: 0.07 }, 2.6)
-        .to(q(`.${side}`), { y: 280, autoAlpha: 0, duration: 1.2, ease: "power2.in" }, 3.5);
+      tl.to(segs, { rotate: (k: number) => sg * (1 + 0.8 * k), duration: 0.8, ease: "sine.in" }, 2.1)
+        .to(segs[0], { rotate: sg * 64, duration: 1.7, ease: "power2.in" }, 2.7)
+        .to(segs.slice(1), { rotate: (k: number) => sg * (3 - 0.3 * k), duration: 1.5, ease: "sine.inOut", stagger: 0.07 }, 2.8)
+        .to(q(`.${side}`), { y: 280, autoAlpha: 0, duration: 1.2, ease: "power2.in" }, 3.7);
     }
     tl
       // the butterflies resting on the doors take off first
@@ -318,7 +343,7 @@ export default function Opening() {
             <Ribbon side="L" />
             <Ribbon side="R" />
             <img className={s.bowStill} src="/art/cover-bow.webp" alt="" />
-            <span className={s.untie} />
+            <canvas ref={filmCanvas} className={s.untieFilm} width={640} height={1240} />
           </div>
           {[0, 1, 2].map((i) => (
             <div key={i} className={`${s.coverFly} ${s[`cf${i}`]}`} aria-hidden>

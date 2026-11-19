@@ -243,22 +243,26 @@ def cover():
         S.render(f"cover-{part}")
 
 
-UNTIE_FRAMES = 30
+UNTIE_FRAMES = 48
 
 
 def untie():
-    """cover-untie-00..29, 320 x 500 each (shown at 1x), knot at 50% 16%: the cover bow coming undone as one
+    """cover-untie-00..47, 320 x 620 each (shown at 1x), knot at (160, 80), its shadow on the doors baked in: the cover bow coming undone as one
     continuous motion of cloth. The right tail is drawn down and out, and grows as the right loop's cloth
     runs through the knot into it; then the left loop goes the same way into the left tail; the knot
     opens, and the two freed ends swing loose and fall. publish.py packs the frames into one sprite."""
     W = .03
     tex = dict(ppm=12, seed=21)
-    S.reset(128)
+    S.reset(256)                 # enough samples that the soft shadow doesn't shimmer frame to frame
     mats = {k: S.mat_aronai(f"u{k}", 2000, W * 1000, u0=a, u1=b, **tex)
             for k, (a, b) in {"loopL": (.35, .45), "loopR": (.55, .65), "knot": (.48, .51), "tail": (.9, 1.0)}.items()}
     crease = S.mat_plain("ucr", "#7E0E15", rough=.8)
+    # the doors' cloth just behind the bow, as a shadow catcher: the bow's own shadow is part of every
+    # frame (no CSS shadow filter to redraw while it plays)
+    wall = S.mesh_obj("doors", [(-.4, .02, .2), (-.4, .02, -.7), (.4, .02, -.7), (.4, .02, .2)], [(0, 1, 2, 3)], smooth=False)   # facing the camera and light
+    wall.is_shadow_catcher = True
     S.key_light(target=(0, 0, -.12), dist=2.0, size=1.6, energy=110, az=-110, el=40)
-    S.camera((0, -2, -.17), (0, 0, -.17), 0, (320, 500), ortho_width=.32)
+    S.camera((0, -2, -.23), (0, 0, -.23), 0, (320, 620), ortho_width=.32)
     ease = lambda x: x * x * (3 - 2 * x)                     # noqa: E731
 
     def phase(t, a, b):
@@ -296,7 +300,7 @@ def untie():
             end = rest_end.lerp(pulled_end, pull)
             end = end.lerp(Vector((start.x + sgn * .02, 0, start.z - (end - start).length)), c * .8)   # swings to hang
             ctrl = start.lerp(end, .5) + Vector((sgn * (.03 - .02 * pull), -.004, .02 * (1 - c)))
-            drop = Vector((0, 0, -.32 * c * c))
+            drop = Vector((0, 0, -.11 * c * c))      # the page carries the fall on from here
             pts = [p + drop for p in curve(start, ctrl, end)]
             ob, ends = scarf("tail", pts, W, base_normal=(0, -1, 0))
             ob.data.materials.append(mats["tail"]); objs.append(ob)
@@ -305,21 +309,22 @@ def untie():
             warp_fringe(f"uf{sgn}", p, tt, sd, W, .02, rng=np.random.default_rng(50 + sgn), cord=crease)
             objs += [o for o in S.bpy.data.objects if o not in before]
         k = 1 - c
-        if k > .05:
+        if k > .2:
             kp = [Vector((.004 * math.sin(u * 6), -.016 * math.sin(math.pi * u) ** .8, .026 - .052 * u)) for u in np.linspace(0, 1, 40)]
             ob, _ = scarf("knot", kp, W * 1.15 * (1 + .25 * a * b), base_normal=(0, -1, 0))
             ob.data.materials.append(mats["knot"])
             ob.scale = (1 + .3 * c, 1, k)
+            ob.location.z -= .11 * c * c                # it goes down with the ends, not left in the air
             objs.append(ob)
         S.render(f"cover-untie-{fr:02d}")
         if fr == 0:
             # the still bow on the closed cover: this same pose, sharp (2x), so the film takes over seamlessly
             sc = S.bpy.context.scene
-            sc.render.resolution_x, sc.render.resolution_y = 640, 1000
+            sc.render.resolution_x, sc.render.resolution_y = 640, 1240
             sc.cycles.samples = 256
             S.render("cover-bow")
-            sc.render.resolution_x, sc.render.resolution_y = 320, 500
-            sc.cycles.samples = 128
+            sc.render.resolution_x, sc.render.resolution_y = 320, 620
+            sc.cycles.samples = 256
         for o in objs:
             S.bpy.data.objects.remove(o, do_unlink=True)
 
